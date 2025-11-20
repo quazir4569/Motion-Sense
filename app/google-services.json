@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "564221539130",
+    "project_id": "motion-sense-f0466",
+    "storage_bucket": "motion-sense-f0466.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:564221539130:android:6b1382acb779db9db55603",
+        "android_client_info": {
+          "package_name": "week11.st4324.motionsense"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDGqoPPnX0DV9-KtSCJ06efOMYO9Ugdsfw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
