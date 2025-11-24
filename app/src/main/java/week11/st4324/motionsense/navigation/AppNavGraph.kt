@@ -1,20 +1,23 @@
 package week11.st4324.motionsense.navigation
 
-import androidx.compose.runtime.*
-import androidx.navigation.compose.*
+import androidx.compose.runtime.Composable
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import com.google.firebase.auth.FirebaseAuth
 import week11.st4324.motionsense.auth.AuthViewModel
-import androidx.lifecycle.viewmodel.compose.viewModel
+import week11.st4324.motionsense.sensor.SensorPedometerViewModel
 import week11.st4324.motionsense.ui.screens.ForgotPasswordScreen
 import week11.st4324.motionsense.ui.screens.HomeScreen
 import week11.st4324.motionsense.ui.screens.LoginScreen
 import week11.st4324.motionsense.ui.screens.RegisterScreen
-import week11.st4324.motionsense.ui.screens.*
 
 @Composable
 fun AppNavGraph() {
     val navController = rememberNavController()
     val vm: AuthViewModel = viewModel()
+    val senpedvm: SensorPedometerViewModel = viewModel()
     val user = FirebaseAuth.getInstance().currentUser
 
     NavHost(
@@ -54,6 +57,7 @@ fun AppNavGraph() {
         }
         composable("home") {
             HomeScreen(
+                senpedvm = senpedvm,
                 onLogout = {
                     vm.logout()
                     navController.navigate("login") {

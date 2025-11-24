@@ -65,6 +65,9 @@ dependencies {
     implementation("com.google.firebase:firebase-auth")
     implementation("com.google.firebase:firebase-firestore")
 
+    // add the Accompanist Permissions dependency
+    implementation("com.google.accompanist:accompanist-permissions:0.36.0")
+
     implementation(libs.androidx.compose.foundation.android)
 
     testImplementation(libs.junit)
@@ -75,4 +78,6 @@ dependencies {
 
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
+
+
 }
