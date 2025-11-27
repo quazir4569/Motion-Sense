@@ -7,7 +7,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.google.firebase.auth.FirebaseAuth
 import week11.st4324.motionsense.auth.AuthViewModel
-import week11.st4324.motionsense.sensor.SensorPedometerViewModel
+import week11.st4324.motionsense.sensor.SensorsViewModel
 import week11.st4324.motionsense.ui.screens.ForgotPasswordScreen
 import week11.st4324.motionsense.ui.screens.HomeScreen
 import week11.st4324.motionsense.ui.screens.LoginScreen
@@ -17,7 +17,7 @@ import week11.st4324.motionsense.ui.screens.RegisterScreen
 fun AppNavGraph() {
     val navController = rememberNavController()
     val vm: AuthViewModel = viewModel()
-    val senpedvm: SensorPedometerViewModel = viewModel()
+    val senpedvm: SensorsViewModel = viewModel()
     val user = FirebaseAuth.getInstance().currentUser
 
     NavHost(

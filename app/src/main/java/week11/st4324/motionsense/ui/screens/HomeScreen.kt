@@ -1,6 +1,8 @@
 package week11.st4324.motionsense.ui.screens
 
 import android.Manifest
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -38,17 +40,20 @@ import com.google.accompanist.permissions.rememberPermissionState
 import com.google.accompanist.permissions.shouldShowRationale
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
-import week11.st4324.motionsense.sensor.SensorPedometerViewModel
+import week11.st4324.motionsense.sensor.SensorsViewModel
 
+@RequiresApi(Build.VERSION_CODES.Q)
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
-fun HomeScreen(senpedvm: SensorPedometerViewModel, onLogout: () -> Unit) {
+fun HomeScreen(senpedvm: SensorsViewModel, onLogout: () -> Unit) {
 
     val steps by senpedvm.steps.collectAsState()
 
     val currentUser: FirebaseUser? = FirebaseAuth.getInstance().currentUser
 
     val userEmail: String? = currentUser?.email
+
+    val status by senpedvm.status.collectAsState()
 
     DisposableEffect(Unit) {
         senpedvm.start()
@@ -138,6 +143,10 @@ fun HomeScreen(senpedvm: SensorPedometerViewModel, onLogout: () -> Unit) {
                             )
                         }
 
+                        Text(text = "Status:  $status")
+
+
+
                         when {
                             permission.status.isGranted -> {
                                 Text(text = "Step count: $steps")
@@ -155,7 +164,6 @@ fun HomeScreen(senpedvm: SensorPedometerViewModel, onLogout: () -> Unit) {
                     }
                 }
             }
-
             Spacer(Modifier.height(20.dp))
             Button(onClick = onLogout, modifier = Modifier.fillMaxWidth()) {
                 Text("Logout")
