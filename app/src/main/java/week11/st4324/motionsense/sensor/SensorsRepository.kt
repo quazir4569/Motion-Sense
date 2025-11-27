@@ -16,14 +16,16 @@ class SensorsRepository(context: Context) : SensorEventListener {
     private val sensorManager: SensorManager =
         context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
     private var stepDetectorSensor: Sensor? = null
-
     private var accelerometerSensor: Sensor? = null
 
+    //Values for step counter
     private val _steps = MutableStateFlow(0)
     val steps: StateFlow<Int> = _steps
 
+    //Value for FireStore Database
     private val db = FirebaseFirestore.getInstance()
 
+    //Values for x-y-z (Added StateFlow for future reference)
     private val _xValue = MutableStateFlow(0.0f)
     val xValue: StateFlow<Float> = _xValue
     private val _yValue = MutableStateFlow(0.0f)
@@ -34,30 +36,29 @@ class SensorsRepository(context: Context) : SensorEventListener {
     private val _status = MutableStateFlow("")
     val status: StateFlow<String> = _status
 
-
+    //This will register the help register or start the sensor
     fun registerStepSensor() {
 
-        if (stepDetectorSensor != null) {
-            stepDetectorSensor = sensorManager.getDefaultSensor(Sensor.TYPE_STEP_DETECTOR)
+        stepDetectorSensor = sensorManager.getDefaultSensor(Sensor.TYPE_STEP_DETECTOR)
+        accelerometerSensor = sensorManager.getDefaultSensor((Sensor.TYPE_ACCELEROMETER))
 
-            stepDetectorSensor?.let {
-                sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_FASTEST)
-            }
-        } else {
-
-            accelerometerSensor = sensorManager.getDefaultSensor((Sensor.TYPE_ACCELEROMETER))
-
-
-            accelerometerSensor?.let {
-                sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_UI)
-            }
+        stepDetectorSensor?.let {
+            sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_FASTEST)
+        }
+        accelerometerSensor?.let {
+            sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_UI)
         }
     }
 
+    //This will unregister or stop the motion sensor.
     fun unregisterStepSensor() {
         sensorManager.unregisterListener(this)
     }
 
+    //This will open a logic as follows:
+    //If steps sensor (TYPE_STEP_DETECTOR) is detected, it will add 1 counter to UI and firebase.
+    //If accelerometer sensor (TYPE_ACCELEROMETER) is detected, it will add a text
+    //base on the magnitude (x-y-z) such as idle, walk, and run.
     override fun onSensorChanged(event: SensorEvent?) {
         if (event?.sensor?.type == Sensor.TYPE_STEP_DETECTOR) {
             _steps.value += 1
@@ -76,12 +77,12 @@ class SensorsRepository(context: Context) : SensorEventListener {
 
             val magnitude = sqrt(x * x + y * y + z * z)
 
-            if (magnitude > 0.0f && magnitude < 5.0f) {
+            if (magnitude > 0.0f && magnitude < 10.0f) {
 
                 _status.value = "Idle"
             }
 
-            if (magnitude > 5.0f && magnitude < 15.0f) {
+            if (magnitude > 10.0f && magnitude < 15.0f) {
 
                 _status.value = "Walk"
             }
@@ -96,6 +97,7 @@ class SensorsRepository(context: Context) : SensorEventListener {
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
     }
 
+    //This will add a step counter to the Firebase (sensorSteps->uid->steps)
     private fun addSteps(steps: Int) {
 
         val user = FirebaseAuth.getInstance().currentUser
