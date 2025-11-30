@@ -59,7 +59,7 @@ class SensorsViewModel(app: Application) : AndroidViewModel(app), SensorEventLis
             lastStepTime = now
             _steps.value += 1                      // add one real step
             _mode.value = "Walking"               // update movement mode
-            updateCadence(now)                    // 👈 new SPM calculation
+            updateCadence(now)                    //  new SPM calculation
         }
 
         // if no steps for 2 sec → user idle

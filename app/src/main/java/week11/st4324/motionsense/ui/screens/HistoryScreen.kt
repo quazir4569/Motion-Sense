@@ -1,5 +1,6 @@
 package week11.st4324.motionsense.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -9,6 +10,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import week11.st4324.motionsense.sensor.StepRepository
 import week11.st4324.motionsense.sensor.StepSession
@@ -21,6 +23,7 @@ fun HistoryScreen(
 ) {
     val repo = remember { StepRepository() }
     var sessions by remember { mutableStateOf<List<StepSession>>(emptyList()) }
+    val beige = Color(0xFFF5F5DC)
 
     val formatter = remember {
         java.text.SimpleDateFormat("yyyy-MM-dd HH:mm")
@@ -39,6 +42,10 @@ fun HistoryScreen(
             )
         }
     ) { padding ->
+
+        Column(modifier = Modifier
+            .background(beige)
+        ) {
 
         Column(
             modifier = Modifier
@@ -76,5 +83,5 @@ fun HistoryScreen(
                 }
             }
         }
-    }
+    }}
 }

@@ -1,21 +1,28 @@
 package week11.st4324.motionsense.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import week11.st4324.motionsense.auth.AuthViewModel
 import week11.st4324.motionsense.ui.components.*
 
 @Composable
 fun ForgotPasswordScreen(
-    vm: AuthViewModel,
+    authenticate: AuthViewModel,
     onBack: () -> Unit
 ) {
-    val state by vm.state.collectAsState()
+    val state by authenticate.state.collectAsState()
     var email by remember { mutableStateOf("") }
+    val beige = Color(0xFFF5F5DC)
 
+
+    Column(modifier = Modifier
+        .background(beige)
+    ) {
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.Center) {
             Text("Reset Password", style = MaterialTheme.typography.headlineMedium)
@@ -25,7 +32,7 @@ fun ForgotPasswordScreen(
             Spacer(Modifier.height(20.dp))
 
             AppButton("Send Reset Email", {
-                vm.reset(email)
+                authenticate.reset(email)
             }, Modifier.fillMaxWidth())
 
             Spacer(Modifier.height(8.dp))
@@ -37,4 +44,4 @@ fun ForgotPasswordScreen(
 
         LoadingOverlay(state.loading)
     }
-}
+}}

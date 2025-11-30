@@ -22,6 +22,9 @@ class SensorsRepository(context: Context) : SensorEventListener {
     private val _steps = MutableStateFlow(0)
     val steps: StateFlow<Int> = _steps
 
+    private var _targetSteps = MutableStateFlow(0)
+    var targetSteps: StateFlow<Int> = _targetSteps
+
     //Value for FireStore Database
     private val db = FirebaseFirestore.getInstance()
 
@@ -53,6 +56,11 @@ class SensorsRepository(context: Context) : SensorEventListener {
     //This will unregister or stop the motion sensor.
     fun unregisterStepSensor() {
         sensorManager.unregisterListener(this)
+    }
+
+    fun completeSteps(){
+
+        targetSteps
     }
 
     //This will open a logic as follows:
@@ -112,5 +120,23 @@ class SensorsRepository(context: Context) : SensorEventListener {
 
             }
         }
+    }
+
+    private fun addTargetSteps(targetSteps: Int){
+
+        val user = FirebaseAuth.getInstance().currentUser
+
+        if (user != null) {
+            val info = hashMapOf("targetSteps" to targetSteps)
+
+            db.collection("sensorSteps").document(user.uid).set(info).addOnSuccessListener {
+                Log.d("FireStore", "Target steps were saved successfully")
+            }.addOnFailureListener { e ->
+                Log.w("FireStore", "Error, target steps were not saved", e)
+
+            }
+        }
+
+
     }
 }
