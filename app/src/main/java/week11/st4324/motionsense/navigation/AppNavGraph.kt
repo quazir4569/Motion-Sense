@@ -6,12 +6,14 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import com.google.android.play.integrity.internal.s
 import week11.st4324.motionsense.auth.AuthViewModel
 import week11.st4324.motionsense.sensor.SensorsViewModel
 import week11.st4324.motionsense.ui.screens.ForgotPasswordScreen
 import week11.st4324.motionsense.ui.screens.HistoryScreen
 import week11.st4324.motionsense.ui.screens.HomeScreen
 import week11.st4324.motionsense.ui.screens.LoginScreen
+import week11.st4324.motionsense.ui.screens.ProfileScreen
 import week11.st4324.motionsense.ui.screens.RegisterScreen
 
 @RequiresApi(Build.VERSION_CODES.Q)
@@ -25,16 +27,22 @@ fun AppNavGraph(
             HomeScreen(
                 senpedvm = vm,
                 onHistory = { nav.navigate("history") },
-                onLogout = { nav.navigate("login")
-                { launchSingleTop = true }
+                onProfile = {nav.navigate("profile")},
+                onLogout = { authenticate.logout()
+                    nav.navigate("login")
+                    {popUpTo("home") {inclusive = true}
+                    }
             })
         }
 
         composable(route = "history") {
-            HistoryScreen(onHome = {
-                nav.navigate("home") },
-                onLogout = { nav.navigate("login")
-                { launchSingleTop = true }
+            HistoryScreen(
+                onHome = { nav.navigate("home") },
+                onProfile = {nav.navigate("profile")},
+                onLogout = { authenticate.logout()
+                    nav.navigate("login")
+                    {popUpTo("home") {inclusive = true}
+                    }
                 })
         }
 
@@ -60,6 +68,18 @@ fun AppNavGraph(
                 onBack = {nav.navigate("login")
                 { launchSingleTop = true}}
             )
+        }
+
+        composable (route = "profile"){
+            ProfileScreen(
+                senpedvm = vm,
+                onHome = { nav.navigate("home") },
+                onHistory = { nav.navigate("history") },
+                onLogout = { authenticate.logout()
+                    nav.navigate("login")
+                    {popUpTo("home") {inclusive = true}
+                    }
+                })
         }
     }
 }

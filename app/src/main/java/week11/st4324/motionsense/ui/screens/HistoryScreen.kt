@@ -12,6 +12,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import week11.st4324.motionsense.sensor.StepRepository
 import week11.st4324.motionsense.sensor.StepSession
 import week11.st4324.motionsense.ui.components.BottomNavBar
@@ -19,11 +20,12 @@ import week11.st4324.motionsense.ui.components.BottomNavBar
 @Composable
 fun HistoryScreen(
     onHome: () -> Unit,
+    onProfile: () -> Unit,
     onLogout: () -> Unit
 ) {
     val repo = remember { StepRepository() }
     var sessions by remember { mutableStateOf<List<StepSession>>(emptyList()) }
-    val beige = Color(0xFFF5F5DC)
+    val dodgerBlue = Color(0xFF1E90FF)
 
     val formatter = remember {
         java.text.SimpleDateFormat("yyyy-MM-dd HH:mm")
@@ -37,6 +39,7 @@ fun HistoryScreen(
         bottomBar = {
             BottomNavBar(
                 onHome = onHome,
+                onProfile = onProfile,
                 onHistory = {},
                 onLogout = onLogout
             )
@@ -44,7 +47,7 @@ fun HistoryScreen(
     ) { padding ->
 
         Column(modifier = Modifier
-            .background(beige)
+            .background(dodgerBlue)
         ) {
 
         Column(
@@ -55,7 +58,7 @@ fun HistoryScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
 
-            Text("History", style = MaterialTheme.typography.headlineLarge)
+            Text("History", fontSize = 40.sp, style = MaterialTheme.typography.headlineLarge)
             Spacer(Modifier.height(16.dp))
 
             if (sessions.isEmpty()) {

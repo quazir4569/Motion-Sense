@@ -18,9 +18,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import week11.st4324.motionsense.auth.AuthViewModel
 import week11.st4324.motionsense.ui.components.AppButton
 import week11.st4324.motionsense.ui.components.AppTextField
@@ -37,15 +39,15 @@ fun RegisterScreen(
     var email by remember { mutableStateOf("") }
     var pass by remember { mutableStateOf("") }
     var confirm by remember { mutableStateOf("") }
-    val beige = Color(0xFFF5F5DC)
+    val dodgerBlue = Color(0xFF1E90FF)
 
     Column(
         modifier = Modifier
-            .background(beige)
+            .background(dodgerBlue)
     ) {
         Box(Modifier.fillMaxSize()) {
-            Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.Center) {
-                Text("Register", style = MaterialTheme.typography.headlineMedium)
+            Column(Modifier.padding(50.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("Register", fontSize = 40.sp, style = MaterialTheme.typography.headlineMedium)
 
                 Spacer(Modifier.height(16.dp))
                 AppTextField(email, { email = it }, "Email", Modifier.fillMaxWidth())

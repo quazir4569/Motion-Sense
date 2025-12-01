@@ -24,6 +24,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
 import week11.st4324.motionsense.sensor.SensorsViewModel
 import week11.st4324.motionsense.sensor.StepRepository
@@ -34,7 +35,7 @@ import week11.st4324.motionsense.ui.components.StepGraph
 @RequiresApi(Build.VERSION_CODES.Q)
 @Composable
 fun HomeScreen(
-    senpedvm: SensorsViewModel, onHistory: () -> Unit, onLogout: () -> Unit
+    senpedvm: SensorsViewModel, onProfile: () -> Unit, onHistory: () -> Unit, onLogout: () -> Unit
 ) {
     val steps by senpedvm.steps.collectAsState()
     val mode by senpedvm.mode.collectAsState()
@@ -43,8 +44,7 @@ fun HomeScreen(
     val repo = remember { StepRepository() }
     var sessions by remember { mutableStateOf<List<StepSession>>(emptyList()) }
     val scope = rememberCoroutineScope()
-
-    val beige = Color(0xFFF5F5DC)
+    val dodgerBlue = Color(0xFF1E90FF)
 
     // initial load
     LaunchedEffect(Unit) {
@@ -55,12 +55,12 @@ fun HomeScreen(
     Scaffold(
         containerColor = Color.White, bottomBar = {
             BottomNavBar(
-                onHome = {}, onHistory = onHistory, onLogout = onLogout
+                onHome = {}, onProfile = onProfile ,onHistory = onHistory, onLogout = onLogout
             )
         }) { padding ->
 
         Column(modifier = Modifier
-            .background(beige)
+            .background(dodgerBlue)
         ) {
 
             Column(
@@ -71,7 +71,7 @@ fun HomeScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
 
-                Text("Home", style = MaterialTheme.typography.headlineLarge)
+                Text("Home", fontSize = 40.sp, style = MaterialTheme.typography.headlineLarge)
                 Spacer(Modifier.height(16.dp))
 
                 Text("Steps: $steps", style = MaterialTheme.typography.headlineMedium)

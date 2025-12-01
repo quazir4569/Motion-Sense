@@ -4,6 +4,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -13,6 +14,7 @@ import androidx.compose.runtime.Composable
 @Composable
 fun BottomNavBar(
     onHome: () -> Unit,
+    onProfile:() -> Unit,
     onHistory: () -> Unit,
     onLogout: () -> Unit
 ) {
@@ -22,6 +24,13 @@ fun BottomNavBar(
             onClick = onHome,
             icon = { Icon(Icons.Default.Home, contentDescription = "Home") },
             label = { Text("Home") }
+        )
+
+        NavigationBarItem(
+            selected = false,
+            onClick = onProfile,
+            icon = { Icon(Icons.Default.Person, contentDescription = "Profile") },
+            label = { Text("Profile") }
         )
 
         NavigationBarItem(
