@@ -4,10 +4,10 @@
     <selectionStates>
       <SelectionState runConfigName="app">
         <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2025-11-23T21:34:06.113932100Z">
+        <DropdownSelection timestamp="2025-11-29T16:03:05.849610100Z">
           <Target type="DEFAULT_BOOT">
             <handle>
-              <DeviceId pluginId="LocalEmulator" identifier="path=D:\AndroidAVD\Wear_OS_Large_Round.avd" />
+              <DeviceId pluginId="LocalEmulator" identifier="path=C:\Users\Ramiz Quazi\.android\avd\HelloPhone.avd" />
             </handle>
           </Target>
         </DropdownSelection>

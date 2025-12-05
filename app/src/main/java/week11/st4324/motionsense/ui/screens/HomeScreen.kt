@@ -3,99 +3,83 @@ package week11.st4324.motionsense.ui.screens
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import kotlinx.coroutines.launch
 import week11.st4324.motionsense.sensor.SensorsViewModel
-import week11.st4324.motionsense.sensor.StepRepository
-import week11.st4324.motionsense.sensor.StepSession
 import week11.st4324.motionsense.ui.components.BottomNavBar
 import week11.st4324.motionsense.ui.components.StepGraph
 
 @RequiresApi(Build.VERSION_CODES.Q)
 @Composable
 fun HomeScreen(
-    senpedvm: SensorsViewModel, onProfile: () -> Unit, onHistory: () -> Unit, onLogout: () -> Unit
+    senpedvm: SensorsViewModel,
+    onHistory: () -> Unit,
+    onProfile: () -> Unit,
+    onLogout: () -> Unit
 ) {
     val steps by senpedvm.steps.collectAsState()
     val mode by senpedvm.mode.collectAsState()
     val cadence by senpedvm.cadence.collectAsState()
+    val sessions by senpedvm.sessions.collectAsState()
+    val sessionActive by senpedvm.sessionActive.collectAsState()
 
-    val repo = remember { StepRepository() }
-    var sessions by remember { mutableStateOf<List<StepSession>>(emptyList()) }
-    val scope = rememberCoroutineScope()
-    val dodgerBlue = Color(0xFF1E90FF)
-
-    // initial load
+    // Start sensors when entering the screen
     LaunchedEffect(Unit) {
-        repo.loadSessions { sessions = it }
-        senpedvm.start()
+        senpedvm.startSensors()
+        senpedvm.loadSessions()
+    }
+
+    // Stop sensors when leaving
+    DisposableEffect(Unit) {
+        onDispose { senpedvm.stopSensors() }
     }
 
     Scaffold(
-        containerColor = Color.White, bottomBar = {
+        bottomBar = {
             BottomNavBar(
-                onHome = {}, onProfile = onProfile ,onHistory = onHistory, onLogout = onLogout
+                onHome = { /* already here */ },
+                onHistory = onHistory,
+                onProfile = onProfile,
+                onLogout = onLogout
             )
-        }) { padding ->
-
-        Column(modifier = Modifier
-            .background(dodgerBlue)
+        }
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.White)
+                .padding(padding)
+                .padding(20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
 
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .padding(20.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
+            Text("Dashboard", style = MaterialTheme.typography.headlineLarge)
 
-                Text("Home", fontSize = 40.sp, style = MaterialTheme.typography.headlineLarge)
-                Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(16.dp))
 
-                Text("Steps: $steps", style = MaterialTheme.typography.headlineMedium)
-                Text("Cadence: $cadence SPM")
-                Text("Mode: $mode")
+            StepGraph(stepValues = sessions.map { it.steps })
 
-                Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(16.dp))
 
-                Button(
-                    onClick = {
-                        scope.launch {
-                            repo.saveSession(steps) {
-                                repo.loadSessions { sessions = it }
-                            }
-                        }
-                    }) {
-                    Text("Save Session")
+            Text("Steps (current session): $steps")
+            Text("Cadence: $cadence SPM")
+            Text("Mode: $mode")
+
+            Spacer(Modifier.height(20.dp))
+
+            if (!sessionActive) {
+                Button(onClick = { senpedvm.startSession() }) {
+                    Text("Start Session")
                 }
-
-                Spacer(Modifier.height(30.dp))
-
-                StepGraph(
-                    stepValues = sessions.map { it.steps }, label = "Steps"
-                )
+            } else {
+                Button(onClick = { senpedvm.endSession() }) {
+                    Text("End Session (Save)")
+                }
             }
         }
     }

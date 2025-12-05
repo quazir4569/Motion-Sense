@@ -1,142 +1,164 @@
 package week11.st4324.motionsense.sensor
 
-import android.content.Context
+import android.app.Application
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
-import android.util.Log
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlin.math.sqrt
+import android.os.Build
+import androidx.annotation.RequiresApi
+import kotlin.math.max
 
-class SensorsRepository(context: Context) : SensorEventListener {
-    private val sensorManager: SensorManager =
-        context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
-    private var stepDetectorSensor: Sensor? = null
-    private var accelerometerSensor: Sensor? = null
+@RequiresApi(Build.VERSION_CODES.Q)
+class SensorsRepository(private val app: Application) : SensorEventListener {
 
-    //Values for step counter
-    private val _steps = MutableStateFlow(0)
-    val steps: StateFlow<Int> = _steps
+    private val sensorManager =
+        app.getSystemService(SensorManager::class.java)
 
-    private var _targetSteps = MutableStateFlow(0)
-    var targetSteps: StateFlow<Int> = _targetSteps
+    private val stepDetector: Sensor? =
+        sensorManager.getDefaultSensor(Sensor.TYPE_STEP_DETECTOR)
 
-    //Value for FireStore Database
-    private val db = FirebaseFirestore.getInstance()
+    private val accelerometer: Sensor? =
+        sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
 
-    //Values for x-y-z (Added StateFlow for future reference)
-    private val _xValue = MutableStateFlow(0.0f)
-    val xValue: StateFlow<Float> = _xValue
-    private val _yValue = MutableStateFlow(0.0f)
-    val yValue: StateFlow<Float> = _xValue
-    private val _zValue = MutableStateFlow(0.0f)
-    val zValue: StateFlow<Float> = _xValue
+    private var onStep: ((Int) -> Unit)? = null
+    private var onCadence: ((Int) -> Unit)? = null
+    private var onMode: ((String) -> Unit)? = null
 
-    private val _status = MutableStateFlow("")
-    val status: StateFlow<String> = _status
+    private var sessionSteps = 0
+    private val stepTimestamps = mutableListOf<Long>()
 
-    //This will register the help register or start the sensor
-    fun registerStepSensor() {
+    private var sessionStartTime: Long = 0L
+    private var sessionEndTime: Long = 0L
 
-        stepDetectorSensor = sensorManager.getDefaultSensor(Sensor.TYPE_STEP_DETECTOR)
-        accelerometerSensor = sensorManager.getDefaultSensor((Sensor.TYPE_ACCELEROMETER))
+    // Used for Idle detection
+    private var lastStepTimeMs: Long = 0L
 
-        stepDetectorSensor?.let {
-            sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_FASTEST)
+    // Accelerometer smoothing
+    private val alpha = 0.8f
+    private var smoothed = 0f
+
+    private val minStepIntervalMs = 300
+
+    fun startSensors(
+        onStep: (Int) -> Unit,
+        onCadence: (Int) -> Unit,
+        onMode: (String) -> Unit
+    ) {
+        this.onStep = onStep
+        this.onCadence = onCadence
+        this.onMode = onMode
+
+        stepDetector?.let {
+            sensorManager.registerListener(
+                this,
+                it,
+                SensorManager.SENSOR_DELAY_FASTEST
+            )
         }
-        accelerometerSensor?.let {
-            sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_UI)
+
+        accelerometer?.let {
+            sensorManager.registerListener(
+                this,
+                it,
+                SensorManager.SENSOR_DELAY_GAME
+            )
         }
     }
 
-    //This will unregister or stop the motion sensor.
-    fun unregisterStepSensor() {
+    fun stopSensors() {
         sensorManager.unregisterListener(this)
     }
 
-    fun completeSteps(){
-
-        targetSteps
+    fun beginSession() {
+        sessionSteps = 0
+        stepTimestamps.clear()
+        sessionStartTime = System.currentTimeMillis()
     }
 
-    //This will open a logic as follows:
-    //If steps sensor (TYPE_STEP_DETECTOR) is detected, it will add 1 counter to UI and firebase.
-    //If accelerometer sensor (TYPE_ACCELEROMETER) is detected, it will add a text
-    //base on the magnitude (x-y-z) such as idle, walk, and run.
+    fun finishSession(): StepSession {
+        sessionEndTime = System.currentTimeMillis()
+
+        val avgCadence = if (stepTimestamps.size >= 2) {
+            val durationSec =
+                max(1.0, (stepTimestamps.last() - stepTimestamps.first()) / 1000.0)
+            ((stepTimestamps.size / durationSec) * 60).toInt()
+        } else 0
+
+        return StepSession(
+            steps = sessionSteps,
+            avgCadence = avgCadence,
+            startedAt = sessionStartTime,
+            endedAt = sessionEndTime
+        )
+    }
+
     override fun onSensorChanged(event: SensorEvent?) {
-        if (event?.sensor?.type == Sensor.TYPE_STEP_DETECTOR) {
-            _steps.value += 1
-
-            addSteps(_steps.value)
+        when (event?.sensor?.type) {
+            Sensor.TYPE_STEP_DETECTOR -> handleStepDetector()
+            Sensor.TYPE_ACCELEROMETER -> handleAccelerometer(event)
         }
-        if (event?.sensor?.type == Sensor.TYPE_ACCELEROMETER) {
+    }
 
-            val x = event.values[0]
-            val y = event.values[1]
-            val z = event.values[2]
+    private fun handleStepDetector() {
+        val now = System.currentTimeMillis()
+        lastStepTimeMs = now
 
-            _xValue.value = x
-            _yValue.value = y
-            _zValue.value = z
+        sessionSteps++
+        stepTimestamps.add(now)
 
-            val magnitude = sqrt(x * x + y * y + z * z)
+        onStep?.invoke(sessionSteps)
+        onMode?.invoke("Walking")
 
-            if (magnitude > 0.0f && magnitude < 10.0f) {
+        if (stepTimestamps.size >= 2) {
+            val durationSec =
+                max(1.0, (stepTimestamps.last() - stepTimestamps.first()) / 1000.0)
+            val cadence = ((stepTimestamps.size / durationSec) * 60).toInt()
+            onCadence?.invoke(cadence)
+        }
+    }
 
-                _status.value = "Idle"
-            }
+    private fun handleAccelerometer(event: SensorEvent) {
+        val now = System.currentTimeMillis()
 
-            if (magnitude > 10.0f && magnitude < 15.0f) {
+        val rawAccel =
+            kotlin.math.sqrt(
+                event.values[0] * event.values[0] +
+                        event.values[1] * event.values[1] +
+                        event.values[2] * event.values[2]
+            ) - 9.81f
 
-                _status.value = "Walk"
-            }
+        smoothed = alpha * smoothed + (1 - alpha) * rawAccel
 
-            if (magnitude > 15.0f) {
+        val stepThreshold = 1.2f
 
-                _status.value = "Run"
+        if (smoothed > stepThreshold &&
+            (now - lastStepTimeMs) > minStepIntervalMs
+        ) {
+            lastStepTimeMs = now
+
+            sessionSteps++
+            stepTimestamps.add(now)
+
+            onStep?.invoke(sessionSteps)
+            onMode?.invoke("Walking")
+
+            if (stepTimestamps.size >= 2) {
+                val durationSec =
+                    max(1.0, (stepTimestamps.last() - stepTimestamps.first()) / 1000.0)
+                val cadence = ((stepTimestamps.size / durationSec) * 60).toInt()
+                onCadence?.invoke(cadence)
             }
         }
     }
 
-    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
-    }
-
-    //This will add a step counter to the Firebase (sensorSteps->uid->steps)
-    private fun addSteps(steps: Int) {
-
-        val user = FirebaseAuth.getInstance().currentUser
-
-        if (user != null) {
-            val info = hashMapOf("steps" to steps)
-
-            db.collection("sensorSteps").document(user.uid).set(info).addOnSuccessListener {
-                Log.d("FireStore", "Steps were saved successfully")
-            }.addOnFailureListener { e ->
-                Log.w("FireStore", "Error, steps were not saved", e)
-
-            }
+    // polled by ViewModel idle timer
+    fun updateIdleState() {
+        val now = System.currentTimeMillis()
+        if (now - lastStepTimeMs > 2000) {
+            onMode?.invoke("Idle")
         }
     }
 
-    private fun addTargetSteps(targetSteps: Int){
-
-        val user = FirebaseAuth.getInstance().currentUser
-
-        if (user != null) {
-            val info = hashMapOf("targetSteps" to targetSteps)
-
-            db.collection("sensorSteps").document(user.uid).set(info).addOnSuccessListener {
-                Log.d("FireStore", "Target steps were saved successfully")
-            }.addOnFailureListener { e ->
-                Log.w("FireStore", "Error, target steps were not saved", e)
-
-            }
-        }
-
-
-    }
+    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) = Unit
 }

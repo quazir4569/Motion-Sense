@@ -1,90 +1,66 @@
 package week11.st4324.motionsense.ui.screens
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import week11.st4324.motionsense.sensor.StepRepository
-import week11.st4324.motionsense.sensor.StepSession
+import week11.st4324.motionsense.sensor.SensorsViewModel
 import week11.st4324.motionsense.ui.components.BottomNavBar
 
+@RequiresApi(Build.VERSION_CODES.Q)
 @Composable
 fun HistoryScreen(
+    senpedvm: SensorsViewModel,
     onHome: () -> Unit,
     onProfile: () -> Unit,
     onLogout: () -> Unit
 ) {
-    val repo = remember { StepRepository() }
-    var sessions by remember { mutableStateOf<List<StepSession>>(emptyList()) }
-    val dodgerBlue = Color(0xFF1E90FF)
-
-    val formatter = remember {
-        java.text.SimpleDateFormat("yyyy-MM-dd HH:mm")
-    }
-
-    LaunchedEffect(Unit) {
-        repo.loadSessions { sessions = it }
-    }
+    val sessions by senpedvm.sessions.collectAsState()
 
     Scaffold(
         bottomBar = {
             BottomNavBar(
                 onHome = onHome,
+                onHistory = { /* already here */ },
                 onProfile = onProfile,
-                onHistory = {},
                 onLogout = onLogout
             )
         }
     ) { padding ->
-
-        Column(modifier = Modifier
-            .background(dodgerBlue)
-        ) {
-
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .background(Color.White)
                 .padding(padding)
-                .padding(20.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .padding(20.dp)
+                .verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.Start
         ) {
-
-            Text("History", fontSize = 40.sp, style = MaterialTheme.typography.headlineLarge)
+            Text("History", style = MaterialTheme.typography.headlineLarge)
             Spacer(Modifier.height(16.dp))
 
             if (sessions.isEmpty()) {
-                Text("No saved sessions yet.")
+                Text("No sessions yet.")
             } else {
-                sessions.forEach { session ->
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 6.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant
-                        )
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(12.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text("${session.steps} steps")
-                            Text(formatter.format(session.timestamp))
-                        }
-                    }
+                sessions.forEachIndexed { index, session ->
+                    Text("Session ${index + 1}")
+                    Text("• Steps: ${session.steps}")
+                    Text("• Avg cadence: ${session.avgCadence} SPM")
+                    Spacer(Modifier.height(12.dp))
                 }
             }
         }
-    }}
+    }
 }

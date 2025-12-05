@@ -2,39 +2,48 @@ package week11.st4324.motionsense.sensor
 
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
-
-data class StepSession(
-    val steps: Int = 0,
-    val timestamp: Long = System.currentTimeMillis()
-)
+import com.google.firebase.firestore.CollectionReference
+import kotlinx.coroutines.tasks.await
 
 class StepRepository {
 
-    private val db = FirebaseFirestore.getInstance()
     private val auth = FirebaseAuth.getInstance()
+    private val db = FirebaseFirestore.getInstance()
 
-    private fun userId(): String =
-        auth.currentUser?.uid ?: "anonymous"
-
-    fun saveSession(steps: Int, onDone: () -> Unit = {}) {
-        val session = StepSession(steps = steps)
-        db.collection("users")
-            .document(userId())
+    // Each user gets: users/{uid}/sessions/{sessionId}
+    private fun userSessionsCollection(): CollectionReference? {
+        val user = auth.currentUser ?: return null
+        return db.collection("users")
+            .document(user.uid)
             .collection("sessions")
-            .add(session)
-            .addOnSuccessListener { onDone() }
     }
 
-    // Load all sessions once
-    fun loadSessions(onResult: (List<StepSession>) -> Unit) {
-        db.collection("users")
-            .document(userId())
-            .collection("sessions")
-            .orderBy("timestamp")
-            .get()
-            .addOnSuccessListener { snap ->
-                val list = snap.toObjects(StepSession::class.java)
-                onResult(list)
-            }
+    suspend fun saveSession(session: StepSession) {
+        val col = userSessionsCollection() ?: return
+
+        val docRef = if (session.id.isNotBlank()) {
+            col.document(session.id)
+        } else {
+            col.document()
+        }
+
+        val user = auth.currentUser
+
+        val sessionWithUser = session.copy(
+            id = docRef.id,
+            userId = user?.uid ?: "",
+            userEmail = user?.email ?: "",
+            // keep steps / cadence / timestamps from session as-is
+        )
+
+        docRef.set(sessionWithUser).await()
+    }
+
+    suspend fun loadSessions(): List<StepSession> {
+        val col = userSessionsCollection() ?: return emptyList()
+
+        // order by start time so graphs & history are stable
+        val snapshot = col.orderBy("startedAt").get().await()
+        return snapshot.toObjects(StepSession::class.java)
     }
 }

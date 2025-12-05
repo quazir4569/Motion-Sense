@@ -1,99 +1,112 @@
 package week11.st4324.motionsense.sensor
 
 import android.app.Application
-import android.hardware.Sensor
-import android.hardware.SensorEvent
-import android.hardware.SensorEventListener
-import android.hardware.SensorManager
-import androidx.lifecycle.AndroidViewModel
+import android.os.Build
+import androidx.annotation.RequiresApi
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlin.math.sqrt
-import kotlin.math.abs
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
 
-// Handles step counting + cadence calculation + motion detection
-class SensorsViewModel(app: Application) : AndroidViewModel(app), SensorEventListener {
+@RequiresApi(Build.VERSION_CODES.Q)
+class SensorsViewModel(
+    private val app: Application
+) : ViewModel() {
 
-    // android sensor system
-    private val sensorManager = app.getSystemService(SensorManager::class.java)
+    private val repo = SensorsRepository(app)
+    private val stepRepo = StepRepository()
 
-    // live step counter
     private val _steps = MutableStateFlow(0)
-    val steps = _steps.asStateFlow()
+    val steps: StateFlow<Int> = _steps
 
-    // cadence (steps per minute)
     private val _cadence = MutableStateFlow(0)
-    val cadence = _cadence.asStateFlow()
+    val cadence: StateFlow<Int> = _cadence
 
-    // current movement state
     private val _mode = MutableStateFlow("Idle")
-    val mode = _mode.asStateFlow()
+    val mode: StateFlow<String> = _mode
 
-    // store timestamps of recent steps for SPM math
-    private val lastSteps = ArrayDeque<Long>()   // holds last 10 step timestamps
+    private val _sessionActive = MutableStateFlow(false)
+    val sessionActive: StateFlow<Boolean> = _sessionActive
 
-    // sensitivity threshold (higher = less sensitive)
-    private val sensitivity = 2.5f                // you requested lower sensitivity
+    private val _sessions = MutableStateFlow<List<StepSession>>(emptyList())
+    val sessions: StateFlow<List<StepSession>> = _sessions
 
-    private var lastStepTime = 0L                 // last detected step time
+    init {
+        // Load existing sessions when ViewModel is created
+        loadSessions()
 
-    // when accelerometer data comes in
-    override fun onSensorChanged(event: SensorEvent?) {
-        if (event == null || event.sensor.type != Sensor.TYPE_ACCELEROMETER) return
-
-        val now = System.currentTimeMillis()      // used for timing + cadence
-
-        // read x,y,z acceleration values
-        val ax = event.values[0]
-        val ay = event.values[1]
-        val az = event.values[2]
-
-        // calculate magnitude of movement vector
-        val magnitude = sqrt((ax*ax + ay*ay + az*az).toDouble()).toFloat()
-
-        // difference from gravity baseline (9.8m/s²)
-        val delta = abs(magnitude - 9.8f)
-
-        // if motion spike high enough = count step
-        if (delta > sensitivity && now - lastStepTime > 250) {
-            lastStepTime = now
-            _steps.value += 1                      // add one real step
-            _mode.value = "Walking"               // update movement mode
-            updateCadence(now)                    //  new SPM calculation
+        // Idle detection loop
+        viewModelScope.launch {
+            while (true) {
+                delay(1500)
+                repo.updateIdleState()
+            }
         }
-
-        // if no steps for 2 sec → user idle
-        if (now - lastStepTime > 2000) _mode.value = "Idle"
     }
 
-    // Calculate Steps per Minute
-    private fun updateCadence(time: Long) {
-
-        // store time of this step (keep last 10 only)
-        lastSteps.addLast(time)
-        if (lastSteps.size > 10) lastSteps.removeFirst()
-
-        // require 2+ steps to measure cadence
-        if (lastSteps.size < 2) return
-
-        // average interval between recent steps
-        val intervals = lastSteps.zipWithNext { a, b -> b - a }
-        val avgInterval = intervals.average()     // milliseconds per step
-
-        // SPM = 60,000 / avg_interval_per_step
-        _cadence.value = (60000 / avgInterval).toInt()
+    fun startSensors() {
+        repo.startSensors(
+            onStep = { _steps.value = it },
+            onCadence = { _cadence.value = it },
+            onMode = { _mode.value = it }
+        )
     }
 
-    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
-
-    // start listening
-    fun start() {
-        val accel = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
-        sensorManager.registerListener(this, accel, SensorManager.SENSOR_DELAY_GAME)
+    fun stopSensors() {
+        repo.stopSensors()
+        _mode.value = "Idle"
     }
 
-    // stop listening
-    fun stop() {
-        sensorManager.unregisterListener(this)
+    fun startSession() {
+        _sessionActive.value = true
+        _steps.value = 0
+        repo.beginSession()
+    }
+
+    fun endSession() {
+        viewModelScope.launch(Dispatchers.IO) {
+            if (_sessionActive.value) {
+                val session = repo.finishSession()
+                stepRepo.saveSession(session)
+                _sessions.value = stepRepo.loadSessions()
+                _sessionActive.value = false
+            }
+        }
+    }
+
+    fun loadSessions() {
+        viewModelScope.launch(Dispatchers.IO) {
+            _sessions.value = stepRepo.loadSessions()
+        }
+    }
+
+
+     //Used by logout to ensure active session is saved
+     //Before signing out and navigating away.
+
+    fun saveSessionAndLogout(onDone: () -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            if (_sessionActive.value) {
+                val session = repo.finishSession()
+                stepRepo.saveSession(session)
+                _sessionActive.value = false
+            }
+            _sessions.value = stepRepo.loadSessions()
+            onDone()
+        }
+    }
+
+    companion object {
+        fun Factory(app: Application): ViewModelProvider.Factory =
+            object : ViewModelProvider.Factory {
+                override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                    @Suppress("UNCHECKED_CAST")
+                    return SensorsViewModel(app) as T
+                }
+            }
     }
 }

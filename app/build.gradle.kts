@@ -70,6 +70,7 @@ dependencies {
 
     implementation("com.google.accompanist:accompanist-permissions:0.36.0")
     implementation(libs.androidx.compose.foundation.android)
+    implementation(libs.androidx.material3)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

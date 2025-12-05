@@ -1,62 +1,89 @@
 package week11.st4324.motionsense.auth
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
+import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.update
 
-class AuthViewModel(
-    private val repo: AuthRepository = AuthRepository()
-) : ViewModel() {
+data class AuthState(
+    val loading: Boolean = false,
+    val success: Boolean = false,
+    val error: String? = null
+)
+
+class AuthViewModel : ViewModel() {
 
     private val _state = MutableStateFlow(AuthState())
     val state: StateFlow<AuthState> = _state
 
+    private val auth = FirebaseAuth.getInstance()
+
     fun login(email: String, password: String) {
-        viewModelScope.launch {
-            if (email.isBlank() || password.isBlank()) {
-                _state.value = AuthState(error = "Fields cannot be empty")
-                return@launch
+        _state.update { it.copy(loading = true, error = null, success = false) }
+
+        auth.signInWithEmailAndPassword(email, password)
+            .addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    _state.update { it.copy(loading = false, success = true) }
+                } else {
+                    _state.update {
+                        it.copy(
+                            loading = false,
+                            error = task.exception?.message
+                        )
+                    }
+                }
             }
-            _state.value = AuthState(loading = true)
-            val result = repo.login(email, password)
-            _state.value = if (result.isSuccess) AuthState(success = true)
-            else AuthState(error = result.exceptionOrNull()?.localizedMessage)
-        }
     }
 
     fun register(email: String, password: String, confirm: String) {
-        viewModelScope.launch {
-            if (email.isBlank() || password.isBlank() || confirm.isBlank()) {
-                _state.value = AuthState(error = "All fields must be filled")
-                return@launch
-            }
-            if (password != confirm) {
-                _state.value = AuthState(error = "Passwords do not match")
-                return@launch
-            }
-            _state.value = AuthState(loading = true)
-            val result = repo.register(email, password)
-            _state.value = if (result.isSuccess) AuthState(success = true)
-            else AuthState(error = result.exceptionOrNull()?.localizedMessage)
+        if (password != confirm) {
+            _state.update { it.copy(error = "Passwords do not match") }
+            return
         }
+
+        _state.update { it.copy(loading = true, error = null, success = false) }
+
+        auth.createUserWithEmailAndPassword(email, password)
+            .addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    _state.update { it.copy(loading = false, success = true) }
+                } else {
+                    _state.update {
+                        it.copy(
+                            loading = false,
+                            error = task.exception?.message
+                        )
+                    }
+                }
+            }
     }
 
     fun reset(email: String) {
-        viewModelScope.launch {
-            if (email.isBlank()) {
-                _state.value = AuthState(error = "Email required")
-                return@launch
+        _state.update { it.copy(loading = true, error = null, success = false) }
+
+        auth.sendPasswordResetEmail(email)
+            .addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    _state.update { it.copy(loading = false, success = true) }
+                } else {
+                    _state.update {
+                        it.copy(
+                            loading = false,
+                            error = task.exception?.message
+                        )
+                    }
+                }
             }
-            _state.value = AuthState(loading = true)
-            val result = repo.resetPassword(email)
-            _state.value = if (result.isSuccess) AuthState(success = true)
-            else AuthState(error = result.exceptionOrNull()?.localizedMessage)
-        }
     }
 
-    fun logout() { repo.logout() }
+    fun resetState() {
+        _state.value = AuthState()
+    }
 
-    fun clear() { _state.value = AuthState() }
+    fun logout() {
+        FirebaseAuth.getInstance().signOut()
+        resetState()
+    }
 }
