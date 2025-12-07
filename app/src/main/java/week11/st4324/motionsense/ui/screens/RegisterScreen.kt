@@ -20,9 +20,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.graphics.Color
 import week11.st4324.motionsense.auth.AuthViewModel
 import week11.st4324.motionsense.ui.components.AppButton
 import week11.st4324.motionsense.ui.components.AppTextField
@@ -39,37 +40,81 @@ fun RegisterScreen(
     var email by remember { mutableStateOf("") }
     var pass by remember { mutableStateOf("") }
     var confirm by remember { mutableStateOf("") }
-    val dodgerBlue = Color(0xFF1E90FF)
 
-    Column(
+    Box(
         modifier = Modifier
-            .background(dodgerBlue)
+            .fillMaxSize()
+            .background(
+                Brush.verticalGradient(
+                    listOf(
+                        MaterialTheme.colorScheme.primary,
+                        MaterialTheme.colorScheme.background
+                    )
+                )
+            )
     ) {
-        Box(Modifier.fillMaxSize()) {
-            Column(Modifier.padding(50.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("Register", fontSize = 40.sp, style = MaterialTheme.typography.headlineMedium)
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 32.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                "Create Account",
+                fontSize = 32.sp,
+                style = MaterialTheme.typography.headlineMedium,
+                color = Color.White
+            )
 
-                Spacer(Modifier.height(16.dp))
-                AppTextField(email, { email = it }, "Email", Modifier.fillMaxWidth())
-                Spacer(Modifier.height(12.dp))
-                AppTextField(pass, { pass = it }, "Password", Modifier.fillMaxWidth())
-                Spacer(Modifier.height(12.dp))
-                AppTextField(confirm, { confirm = it }, "Confirm Password", Modifier.fillMaxWidth())
+            Spacer(Modifier.height(24.dp))
 
-                Spacer(Modifier.height(20.dp))
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        color = MaterialTheme.colorScheme.surface,
+                        shape = MaterialTheme.shapes.large
+                    )
+                    .padding(24.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                AppTextField(
+                    value = email,
+                    onChange = { email = it },
+                    label = "Email",
+                    modifier = Modifier.fillMaxWidth()
+                )
 
-                AppButton("Create Account", {
-                    authenticate.register(email, pass, confirm)
-                }, Modifier.fillMaxWidth())
+                AppTextField(
+                    value = pass,
+                    onChange = { pass = it },
+                    label = "Password",
+                    modifier = Modifier.fillMaxWidth()
+                )
 
-                Spacer(Modifier.height(8.dp))
-                TextButton(onClick = onBack) { Text("Back") }
+                AppTextField(
+                    value = confirm,
+                    onChange = { confirm = it },
+                    label = "Confirm Password",
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                AppButton(
+                    text = "Register",
+                    onClick = { authenticate.register(email, pass, confirm) },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                TextButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) {
+                    Text("Back")
+                }
 
                 state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                 if (state.success) onSuccess()
             }
-
-            LoadingOverlay(state.loading)
         }
+
+        LoadingOverlay(state.loading)
     }
 }

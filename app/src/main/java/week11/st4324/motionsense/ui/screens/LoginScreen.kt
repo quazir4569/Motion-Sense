@@ -20,9 +20,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.graphics.Color
 import week11.st4324.motionsense.auth.AuthViewModel
 import week11.st4324.motionsense.ui.components.AppButton
 import week11.st4324.motionsense.ui.components.AppTextField
@@ -38,41 +39,77 @@ fun LoginScreen(
     val state by authenticate.state.collectAsState()
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
-    val dodgerBlue = Color(0xFF1E90FF)
 
-    Column(
+    Box(
         modifier = Modifier
-            .background(dodgerBlue)
+            .fillMaxSize()
+            .background(
+                Brush.verticalGradient(
+                    listOf(
+                        MaterialTheme.colorScheme.primary,
+                        MaterialTheme.colorScheme.background
+                    )
+                )
+            )
     ) {
-        Box(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 32.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                "Motion Sense",
+                fontSize = 40.sp,
+                style = MaterialTheme.typography.headlineMedium,
+                color = Color.White
+            )
+
+            Spacer(Modifier.height(24.dp))
+
             Column(
-                modifier = Modifier.padding(50.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        color = MaterialTheme.colorScheme.surface,
+                        shape = MaterialTheme.shapes.large
+                    )
+                    .padding(24.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
+                AppTextField(
+                    value = email,
+                    onChange = { email = it },
+                    label = "Email",
+                    modifier = Modifier.fillMaxWidth()
+                )
 
-                Text("Motion Sense", fontSize = 40.sp, style = MaterialTheme.typography.headlineMedium)
+                AppTextField(
+                    value = password,
+                    onChange = { password = it },
+                    label = "Password",
+                    modifier = Modifier.fillMaxWidth()
+                )
 
-                Spacer(Modifier.height(16.dp))
+                AppButton(
+                    text = "Sign In",
+                    onClick = { authenticate.login(email, password) },
+                    modifier = Modifier.fillMaxWidth()
+                )
 
-                AppTextField(email, { email = it }, "Email", Modifier.fillMaxWidth())
-                Spacer(Modifier.height(12.dp))
-                AppTextField(password, { password = it }, "Password", Modifier.fillMaxWidth())
-
-                Spacer(Modifier.height(20.dp))
-
-                AppButton("Sign In", {
-                    authenticate.login(email, password)
-                }, Modifier.fillMaxWidth())
-
-                Spacer(Modifier.height(8.dp))
-                TextButton(onClick = onRegister) { Text("Create Account") }
-                TextButton(onClick = onForgot) { Text("Forgot Password?") }
+                TextButton(onClick = onRegister, modifier = Modifier.fillMaxWidth()) {
+                    Text("Create Account")
+                }
+                TextButton(onClick = onForgot, modifier = Modifier.fillMaxWidth()) {
+                    Text("Forgot Password?")
+                }
 
                 state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                 if (state.success) onSuccess()
             }
-
-            LoadingOverlay(state.loading)
         }
+
+        LoadingOverlay(state.loading)
     }
 }
