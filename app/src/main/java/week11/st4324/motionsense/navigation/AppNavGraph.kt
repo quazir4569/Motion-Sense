@@ -6,7 +6,6 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import com.google.firebase.auth.FirebaseAuth
 import week11.st4324.motionsense.auth.AuthViewModel
 import week11.st4324.motionsense.sensor.SensorsViewModel
 import week11.st4324.motionsense.ui.screens.*
@@ -17,7 +16,7 @@ fun AppNavGraph(
     nav: NavHostController,
     vm: SensorsViewModel,
     authenticate: AuthViewModel,
-    startDestination: String = "login"
+    startDestination: String
 ) {
     NavHost(
         navController = nav,
@@ -29,7 +28,7 @@ fun AppNavGraph(
                 authenticate = authenticate,
                 onSuccess = {
                     nav.navigate("home") {
-                        popUpTo("login") { inclusive = true }
+                        popUpTo(0)
                         launchSingleTop = true
                     }
                 },
@@ -43,7 +42,7 @@ fun AppNavGraph(
                 authenticate = authenticate,
                 onSuccess = {
                     nav.navigate("home") {
-                        popUpTo("register") { inclusive = true }
+                        popUpTo(0)
                         launchSingleTop = true
                     }
                 },
@@ -64,12 +63,10 @@ fun AppNavGraph(
                 onHistory = { nav.navigate("history") },
                 onProfile = { nav.navigate("profile") },
                 onLogout = {
-                    // Save session, then sign out, then really go to Login
                     vm.saveSessionAndLogout {
                         authenticate.logout()
-                        authenticate.resetState()
                         nav.navigate("login") {
-                            popUpTo(0) { inclusive = true }
+                            popUpTo(0)
                             launchSingleTop = true
                         }
                     }
@@ -85,9 +82,8 @@ fun AppNavGraph(
                 onLogout = {
                     vm.saveSessionAndLogout {
                         authenticate.logout()
-                        authenticate.resetState()
                         nav.navigate("login") {
-                            popUpTo(0) { inclusive = true }
+                            popUpTo(0)
                             launchSingleTop = true
                         }
                     }
@@ -102,9 +98,8 @@ fun AppNavGraph(
                 onLogout = {
                     vm.saveSessionAndLogout {
                         authenticate.logout()
-                        authenticate.resetState()
                         nav.navigate("login") {
-                            popUpTo(0) { inclusive = true }
+                            popUpTo(0)
                             launchSingleTop = true
                         }
                     }

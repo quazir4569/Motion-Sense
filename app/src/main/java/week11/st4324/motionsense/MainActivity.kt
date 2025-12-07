@@ -4,7 +4,6 @@ import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
 import androidx.annotation.RequiresApi
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.rememberNavController
@@ -15,30 +14,30 @@ import week11.st4324.motionsense.sensor.SensorsViewModel
 import week11.st4324.motionsense.ui.theme.MotionSenseTheme
 
 class MainActivity : ComponentActivity() {
+
     @RequiresApi(Build.VERSION_CODES.Q)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
 
         setContent {
             MotionSenseTheme {
 
                 val nav = rememberNavController()
 
-                val vm: SensorsViewModel = viewModel(
+                val authVM: AuthViewModel = viewModel()
+                val sensorVM: SensorsViewModel = viewModel(
                     factory = SensorsViewModel.Factory(application)
                 )
-                val authVM: AuthViewModel = viewModel()
 
-                val startDestination =
-                    if (FirebaseAuth.getInstance().currentUser != null) "home"
-                    else "login"
+                // Determine where the app starts
+                val user = FirebaseAuth.getInstance().currentUser
+                val startDest = if (user != null) "home" else "login"
 
                 AppNavGraph(
                     nav = nav,
-                    vm = vm,
+                    vm = sensorVM,
                     authenticate = authVM,
-                    startDestination = startDestination
+                    startDestination = startDest
                 )
             }
         }

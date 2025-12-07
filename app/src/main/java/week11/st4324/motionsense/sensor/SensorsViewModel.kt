@@ -11,6 +11,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @RequiresApi(Build.VERSION_CODES.Q)
 class SensorsViewModel(
@@ -72,9 +73,9 @@ class SensorsViewModel(
             if (_sessionActive.value) {
                 val session = repo.finishSession()
                 stepRepo.saveSession(session)
-                _sessions.value = stepRepo.loadSessions()
                 _sessionActive.value = false
             }
+            _sessions.value = stepRepo.loadSessions()
         }
     }
 
@@ -84,19 +85,21 @@ class SensorsViewModel(
         }
     }
 
-
-    //Used by logout to ensure active session is saved
-    //Before signing out and navigating away.
-
     fun saveSessionAndLogout(onDone: () -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
+
             if (_sessionActive.value) {
                 val session = repo.finishSession()
                 stepRepo.saveSession(session)
                 _sessionActive.value = false
             }
+
             _sessions.value = stepRepo.loadSessions()
-            onDone()
+
+            // MUST switch to main thread before navigating
+            withContext(Dispatchers.Main) {
+                onDone()
+            }
         }
     }
 

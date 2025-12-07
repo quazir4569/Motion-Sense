@@ -13,6 +13,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -40,6 +41,13 @@ fun LoginScreen(
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
 
+    LaunchedEffect(state.success) {
+        if (state.success) {
+            authenticate.resetState()
+            onSuccess()
+        }
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -52,6 +60,7 @@ fun LoginScreen(
                 )
             )
     ) {
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -98,15 +107,10 @@ fun LoginScreen(
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                TextButton(onClick = onRegister, modifier = Modifier.fillMaxWidth()) {
-                    Text("Create Account")
-                }
-                TextButton(onClick = onForgot, modifier = Modifier.fillMaxWidth()) {
-                    Text("Forgot Password?")
-                }
+                TextButton(onClick = onRegister) { Text("Create Account") }
+                TextButton(onClick = onForgot) { Text("Forgot Password?") }
 
                 state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-                if (state.success) onSuccess()
             }
         }
 
