@@ -5,12 +5,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -28,9 +24,7 @@ import kotlin.math.roundToInt
 @Composable
 fun StepGraph(stepValues: List<Int>) {
 
-    // State for the info popup
-    var showInfo by remember { mutableStateOf(false) }
-
+    // Graph container
     Surface(
         modifier = Modifier
             .fillMaxWidth()
@@ -39,55 +33,11 @@ fun StepGraph(stepValues: List<Int>) {
         tonalElevation = 4.dp,
         color = MaterialTheme.colorScheme.surface
     ) {
-
         Box(modifier = Modifier.fillMaxWidth()) {
-
-            // Top-right info button
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(12.dp)
-                    .size(28.dp)
-                    .pointerInput(Unit) {
-                        detectTapGestures {
-                            showInfo = !showInfo
-                        }
-                    },
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Info,
-                    contentDescription = "Info",
-                    tint = MaterialTheme.colorScheme.primary
-                )
-            }
-
-            //Tooltip bubble when info is tapped
-            if (showInfo) {
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(top = 48.dp, end = 12.dp)
-                        .shadow(8.dp, RoundedCornerShape(12.dp))
-                        .background(
-                            MaterialTheme.colorScheme.surface,
-                            RoundedCornerShape(12.dp)
-                        )
-                        .padding(10.dp)
-                ) {
-                    Text(
-                        text = "Tap the dots on the graph for your session info!",
-                        color = MaterialTheme.colorScheme.onSurface,
-                        fontSize = 14.sp
-                    )
-                }
-            }
-
             GraphContent(stepValues)
         }
     }
 }
-
 
 @Composable
 private fun GraphContent(stepValues: List<Int>) {
@@ -102,6 +52,7 @@ private fun GraphContent(stepValues: List<Int>) {
     val tooltipColor = MaterialTheme.colorScheme.surface
     val tooltipTextColor = MaterialTheme.colorScheme.onSurface
 
+    // Tap detection for bubble tooltip
     var selectedIndex by remember { mutableStateOf<Int?>(null) }
     var selectedOffset by remember { mutableStateOf<Offset?>(null) }
 
@@ -116,6 +67,7 @@ private fun GraphContent(stepValues: List<Int>) {
                     val w = boxSize.width.toFloat()
                     val h = boxSize.height.toFloat()
 
+                    // Compute points
                     val points = data.mapIndexed { i, steps ->
                         val x = if (data.size == 1) 0f else
                             (i.toFloat() / (data.size - 1)) * w
@@ -123,6 +75,7 @@ private fun GraphContent(stepValues: List<Int>) {
                         Offset(x, y)
                     }
 
+                    // Detect tap near a point
                     val hitIndex = points.indexOfFirst { p ->
                         abs(tapOffset.x - p.x) < 40f &&
                                 abs(tapOffset.y - p.y) < 40f
@@ -142,6 +95,7 @@ private fun GraphContent(stepValues: List<Int>) {
         val w = size.width
         val h = size.height
 
+        // Graph points
         val points = data.mapIndexed { i, steps ->
             val x = if (data.size == 1) 0f else
                 (i.toFloat() / (data.size - 1)) * w
@@ -149,11 +103,13 @@ private fun GraphContent(stepValues: List<Int>) {
             Offset(x, y)
         }
 
+        // Line path
         val path = Path().apply {
             moveTo(points.first().x, points.first().y)
             points.drop(1).forEach { p -> lineTo(p.x, p.y) }
         }
 
+        // Fill below the line
         val fillPath = Path().apply {
             addPath(path)
             lineTo(points.last().x, h)
@@ -177,6 +133,7 @@ private fun GraphContent(stepValues: List<Int>) {
             style = Stroke(width = 6f)
         )
 
+        // Draw points
         points.forEachIndexed { index, p ->
             drawCircle(
                 color = pointColor,
@@ -185,11 +142,14 @@ private fun GraphContent(stepValues: List<Int>) {
             )
         }
 
+        // Tooltip bubble
         if (selectedIndex != null && selectedOffset != null) {
             val idx = selectedIndex!!
             val center = selectedOffset!!
 
             drawIntoCanvas { canvas ->
+
+                // Tooltip shape
                 val radiusX = 110f
                 val top = (center.y - 130f).coerceAtLeast(20f)
                 val bottom = top + 80f
@@ -210,6 +170,7 @@ private fun GraphContent(stepValues: List<Int>) {
                     bgPaint
                 )
 
+                // Text inside bubble
                 val textPaint = android.graphics.Paint().apply {
                     color = tooltipTextColor.toArgb()
                     textSize = 38f
@@ -232,6 +193,7 @@ private fun GraphContent(stepValues: List<Int>) {
         }
     }
 }
+
 private fun Color.toArgb(): Int =
     android.graphics.Color.argb(
         (alpha * 255).roundToInt(),

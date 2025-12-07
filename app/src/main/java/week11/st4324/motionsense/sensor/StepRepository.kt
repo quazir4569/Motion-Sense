@@ -10,7 +10,7 @@ class StepRepository {
     private val auth = FirebaseAuth.getInstance()
     private val db = FirebaseFirestore.getInstance()
 
-    // Each user gets: users/{uid}/sessions/{sessionId}
+    // Firebase Storing goes as: users/{uid}/sessions/{sessionId}
     private fun userSessionsCollection(): CollectionReference? {
         val user = auth.currentUser ?: return null
         return db.collection("users")
@@ -33,7 +33,6 @@ class StepRepository {
             id = docRef.id,
             userId = user?.uid ?: "",
             userEmail = user?.email ?: "",
-            // keep steps / cadence / timestamps from session as-is
         )
 
         docRef.set(sessionWithUser).await()

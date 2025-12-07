@@ -1,35 +1,21 @@
 package week11.st4324.motionsense.ui.screens
 
-import android.R.attr.subtitle
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import week11.st4324.motionsense.sensor.SensorsViewModel
 import week11.st4324.motionsense.ui.components.BottomNavBar
@@ -49,6 +35,7 @@ fun HomeScreen(
     val sessions by senpedvm.sessions.collectAsState()
     val sessionActive by senpedvm.sessionActive.collectAsState()
 
+    // Start sensors And load saved sessions
     LaunchedEffect(Unit) {
         senpedvm.startSensors()
         senpedvm.loadSessions()
@@ -61,19 +48,20 @@ fun HomeScreen(
     Scaffold(
         bottomBar = {
             BottomNavBar(
-                onHome = { },
+                onHome = {},
                 onHistory = onHistory,
                 onProfile = onProfile,
                 onLogout = onLogout
             )
         }
     ) { padding ->
+
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(
                     Brush.verticalGradient(
-                        colors = listOf(
+                        listOf(
                             MaterialTheme.colorScheme.primary,
                             MaterialTheme.colorScheme.background
                         )
@@ -82,72 +70,40 @@ fun HomeScreen(
                 .padding(padding)
                 .padding(20.dp)
         ) {
+
             Column(
                 modifier = Modifier.fillMaxSize(),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Text(
-                    text = "Today",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = Color.White.copy(alpha = 0.8f)
-                )
-                Text(
-                    text = "Motion Dashboard",
-                    style = MaterialTheme.typography.headlineLarge,
-                    color = Color.White
-                )
 
+                Text("Today", color = Color.White.copy(alpha = 0.8f))
+                Text("Motion Dashboard", color = Color.White)
+
+                // Steps And Cadence Cards
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    if(sessionActive) {
-                        StatCard(
-                            title = "Steps",
-                            value = steps.toString(),
-                            subtitle = "Current session"
-                        )
-                        StatCard(
-                            title = "Cadence",
-                            value = "$cadence",
-                            subtitle = "SPM"
-
-                        )
-                    }
-                    else {
-
-                        StatCard(
-                            title = "Steps",
-                            value = "0",
-                            subtitle = "Current session"
-                        )
-                        StatCard(
-                            title = "Cadence",
-                            value = "0",
-                            subtitle = "SPM"
-
-                        )
-
-
-                    }
-                }
-
-                if(sessionActive) {
-
                     StatCard(
-                        title = "Mode",
-                        value = mode,
-                        modifier = Modifier.fillMaxWidth()
+                        title = "Steps",
+                        value = if (sessionActive) steps.toString() else "0",
+                        subtitle = "Current session"
                     )
-                }
-                else {
                     StatCard(
-                        title = "Mode",
-                        value = "Idle",
-                        modifier = Modifier.fillMaxWidth()
+                        title = "Cadence",
+                        value = if (sessionActive) cadence.toString() else "0",
+                        subtitle = "SPM"
                     )
                 }
 
+                // Mode card
+                StatCard(
+                    title = "Mode",
+                    value = if (sessionActive) mode else "Idle",
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                // Graph card
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -158,21 +114,75 @@ fun HomeScreen(
                     ),
                     elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
                 ) {
+
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(16.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Text(
-                            text = "Sessions trend (last 8 Days)",
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
+
+                        // Tooltip state
+                        var showInfo by remember { mutableStateOf(false) }
+
+                        // Header And info button
+                        Box(modifier = Modifier.fillMaxWidth()) {
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    text = "Sessions trend (last 8 Sessions)",
+                                    style = MaterialTheme.typography.titleMedium
+                                )
+
+                                Box(
+                                    modifier = Modifier
+                                        .size(28.dp)
+                                        .pointerInput(Unit) {
+                                            detectTapGestures {
+                                                showInfo = !showInfo
+                                            }
+                                        },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Info,
+                                        contentDescription = "Info",
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            }
+
+                            // Tooltip
+                            if (showInfo) {
+                                Box(
+                                    modifier = Modifier
+                                        .align(Alignment.TopEnd)
+                                        .offset(x = (-10).dp, y = 32.dp)
+                                        .shadow(8.dp, RoundedCornerShape(12.dp))
+                                        .background(
+                                            MaterialTheme.colorScheme.surface,
+                                            RoundedCornerShape(12.dp)
+                                        )
+                                        .padding(horizontal = 12.dp, vertical = 8.dp)
+                                ) {
+                                    Text(
+                                        text = "Tap the dots on the graph for your info!",
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                            }
+                        }
+
+                        // Step Trend Graph
                         StepGraph(stepValues = sessions.map { it.steps })
                     }
                 }
 
+                // Start/End Session Buttons
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -183,11 +193,7 @@ fun HomeScreen(
                             modifier = Modifier
                                 .weight(1f)
                                 .height(56.dp),
-                            shape = RoundedCornerShape(24.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.secondary,
-                                contentColor = MaterialTheme.colorScheme.onSecondary
-                            )
+                            shape = RoundedCornerShape(24.dp)
                         ) {
                             Text("Start Session")
                         }
@@ -199,8 +205,7 @@ fun HomeScreen(
                                 .height(56.dp),
                             shape = RoundedCornerShape(24.dp),
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.error,
-                                contentColor = MaterialTheme.colorScheme.onError
+                                containerColor = MaterialTheme.colorScheme.error
                             )
                         ) {
                             Text("End Session (Save)")
@@ -228,25 +233,13 @@ private fun StatCard(
         elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
     ) {
         Column(
-            modifier = Modifier
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.primary
-            )
-            Text(
-                text = value,
-                style = MaterialTheme.typography.headlineMedium
-            )
+            Text(title, style = MaterialTheme.typography.labelMedium)
+            Text(value, style = MaterialTheme.typography.headlineMedium)
             if (subtitle != null) {
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Text(subtitle, style = MaterialTheme.typography.bodySmall)
             }
         }
     }

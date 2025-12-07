@@ -8,6 +8,7 @@ import android.hardware.SensorManager
 import android.os.Build
 import androidx.annotation.RequiresApi
 import kotlin.math.max
+import kotlin.math.sqrt
 
 @RequiresApi(Build.VERSION_CODES.Q)
 class SensorsRepository(private val app: Application) : SensorEventListener {
@@ -15,10 +16,12 @@ class SensorsRepository(private val app: Application) : SensorEventListener {
     private val sensorManager =
         app.getSystemService(SensorManager::class.java)
 
+    // Hardware step detector
     private val stepDetector: Sensor? =
         sensorManager.getDefaultSensor(Sensor.TYPE_STEP_DETECTOR)
 
-    private val accelerometer: Sensor? =
+    // Accelerometer for hybrid step detection
+    private val accel: Sensor? =
         sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
 
     private var onStep: ((Int) -> Unit)? = null
@@ -31,14 +34,18 @@ class SensorsRepository(private val app: Application) : SensorEventListener {
     private var sessionStartTime: Long = 0L
     private var sessionEndTime: Long = 0L
 
-    // Used for Idle detection
     private var lastStepTimeMs: Long = 0L
 
-    // Accelerometer smoothing
-    private val alpha = 0.8f
-    private var smoothed = 0f
+    // Hybrid detection timing
+    private var lastLogicStepTimeMs: Long = 0L
+    private val minStepIntervalMs = 250L // about 4 steps/sec max
 
-    private val minStepIntervalMs = 300
+    // Gravity estimate
+    private var gravityX = 0.0
+    private var gravityY = 0.0
+    private var gravityZ = SensorManager.GRAVITY_EARTH.toDouble()
+    private var lastVerticalDynamic = 0.0
+    private val stepThreshold = 1.4 // up it to lower sensitivity, lower to up sensitivity
 
     fun startSensors(
         onStep: (Int) -> Unit,
@@ -53,11 +60,11 @@ class SensorsRepository(private val app: Application) : SensorEventListener {
             sensorManager.registerListener(
                 this,
                 it,
-                SensorManager.SENSOR_DELAY_FASTEST
+                SensorManager.SENSOR_DELAY_NORMAL
             )
         }
 
-        accelerometer?.let {
+        accel?.let {
             sensorManager.registerListener(
                 this,
                 it,
@@ -74,6 +81,11 @@ class SensorsRepository(private val app: Application) : SensorEventListener {
         sessionSteps = 0
         stepTimestamps.clear()
         sessionStartTime = System.currentTimeMillis()
+
+        lastStepTimeMs = sessionStartTime
+        lastLogicStepTimeMs = sessionStartTime - minStepIntervalMs
+
+        lastVerticalDynamic = 0.0
     }
 
     fun finishSession(): StepSession {
@@ -95,64 +107,89 @@ class SensorsRepository(private val app: Application) : SensorEventListener {
 
     override fun onSensorChanged(event: SensorEvent?) {
         when (event?.sensor?.type) {
-            Sensor.TYPE_STEP_DETECTOR -> handleStepDetector()
-            Sensor.TYPE_ACCELEROMETER -> handleAccelerometer(event)
+            Sensor.TYPE_STEP_DETECTOR -> handleStepDetectorEvent()
+            Sensor.TYPE_ACCELEROMETER -> handleAccelEvent(event)
         }
     }
 
-    private fun handleStepDetector() {
+    private fun handleStepDetectorEvent() {
         val now = System.currentTimeMillis()
-        lastStepTimeMs = now
+        if (now - lastLogicStepTimeMs < minStepIntervalMs) return
+        registerStep(now)
+    }
+
+    private fun handleAccelEvent(event: SensorEvent) {
+        val x = event.values[0].toDouble()
+        val y = event.values[1].toDouble()
+        val z = event.values[2].toDouble()
+
+        gravityX = 0.9 * gravityX + 0.1 * x
+        gravityY = 0.9 * gravityY + 0.1 * y
+        gravityZ = 0.9 * gravityZ + 0.1 * z
+
+        val gx = gravityX
+        val gy = gravityY
+        val gz = gravityZ
+
+        val gravityMag = sqrt(gx * gx + gy * gy + gz * gz)
+        if (gravityMag < 1e-3) {
+            lastVerticalDynamic = 0.0
+            return
+        }
+
+        // Dynamic acceleration
+        val dx = x - gx
+        val dy = y - gy
+        val dz = z - gz
+
+        val verticalDynamic =
+            (dx * gx + dy * gy + dz * gz) / gravityMag
+
+        val now = System.currentTimeMillis()
+        val interval = now - lastLogicStepTimeMs
+
+        val isPeak =
+            verticalDynamic > stepThreshold &&
+                    lastVerticalDynamic <= stepThreshold &&
+                    interval >= minStepIntervalMs
+
+        lastVerticalDynamic = verticalDynamic
+
+        if (isPeak) {
+            registerStep(now)
+        }
+    }
+
+    private fun registerStep(timestampMs: Long) {
+        lastLogicStepTimeMs = timestampMs
+        lastStepTimeMs = timestampMs
 
         sessionSteps++
-        stepTimestamps.add(now)
-
+        stepTimestamps.add(timestampMs)
         onStep?.invoke(sessionSteps)
-        onMode?.invoke("Walking")
 
-        if (stepTimestamps.size >= 2) {
-            val durationSec =
-                max(1.0, (stepTimestamps.last() - stepTimestamps.first()) / 1000.0)
-            val cadence = ((stepTimestamps.size / durationSec) * 60).toInt()
-            onCadence?.invoke(cadence)
-        }
-    }
-
-    private fun handleAccelerometer(event: SensorEvent) {
-        val now = System.currentTimeMillis()
-
-        val rawAccel =
-            kotlin.math.sqrt(
-                event.values[0] * event.values[0] +
-                        event.values[1] * event.values[1] +
-                        event.values[2] * event.values[2]
-            ) - 9.81f
-
-        smoothed = alpha * smoothed + (1 - alpha) * rawAccel
-
-        val stepThreshold = 1.2f
-
-        if (smoothed > stepThreshold &&
-            (now - lastStepTimeMs) > minStepIntervalMs
-        ) {
-            lastStepTimeMs = now
-
-            sessionSteps++
-            stepTimestamps.add(now)
-
-            onStep?.invoke(sessionSteps)
+        if (stepTimestamps.size == 1) {
             onMode?.invoke("Walking")
-
-            if (stepTimestamps.size >= 2) {
-                val durationSec =
-                    max(1.0, (stepTimestamps.last() - stepTimestamps.first()) / 1000.0)
-                val cadence = ((stepTimestamps.size / durationSec) * 60).toInt()
-                onCadence?.invoke(cadence)
-            }
+            onCadence?.invoke(0)
+            return
         }
+
+        val last = stepTimestamps[stepTimestamps.size - 1]
+        val prev = stepTimestamps[stepTimestamps.size - 2]
+        val dtSec = max(0.1, (last - prev) / 1000.0)
+        val instantCadence = (60.0 / dtSec).toInt()
+
+        if (instantCadence > 60) {
+            onMode?.invoke("Walking")
+        }
+
+        val durationSec =
+            max(1.0, (stepTimestamps.last() - stepTimestamps.first()) / 1000.0)
+        val avgCadence = ((stepTimestamps.size / durationSec) * 60).toInt()
+
+        onCadence?.invoke(avgCadence)
     }
 
-    // polled by ViewModel idle timer
     fun updateIdleState() {
         val now = System.currentTimeMillis()
         if (now - lastStepTimeMs > 2000) {

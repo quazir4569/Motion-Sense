@@ -85,8 +85,8 @@ class SensorsViewModel(
     }
 
 
-     //Used by logout to ensure active session is saved
-     //Before signing out and navigating away.
+    //Used by logout to ensure active session is saved
+    //Before signing out and navigating away.
 
     fun saveSessionAndLogout(onDone: () -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
