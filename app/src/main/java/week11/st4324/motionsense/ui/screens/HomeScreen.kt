@@ -1,5 +1,6 @@
 package week11.st4324.motionsense.ui.screens
 
+import android.R.attr.subtitle
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
@@ -100,23 +101,52 @@ fun HomeScreen(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    StatCard(
-                        title = "Steps",
-                        value = steps.toString(),
-                        subtitle = "Current session"
-                    )
-                    StatCard(
-                        title = "Cadence",
-                        value = "$cadence",
-                        subtitle = "SPM"
-                    )
+                    if(sessionActive) {
+                        StatCard(
+                            title = "Steps",
+                            value = steps.toString(),
+                            subtitle = "Current session"
+                        )
+                        StatCard(
+                            title = "Cadence",
+                            value = "$cadence",
+                            subtitle = "SPM"
+
+                        )
+                    }
+                    else {
+
+                        StatCard(
+                            title = "Steps",
+                            value = "0",
+                            subtitle = "Current session"
+                        )
+                        StatCard(
+                            title = "Cadence",
+                            value = "0",
+                            subtitle = "SPM"
+
+                        )
+
+
+                    }
                 }
 
-                StatCard(
-                    title = "Mode",
-                    value = mode,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                if(sessionActive) {
+
+                    StatCard(
+                        title = "Mode",
+                        value = mode,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+                else {
+                    StatCard(
+                        title = "Mode",
+                        value = "Idle",
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
 
                 Card(
                     modifier = Modifier
@@ -135,7 +165,7 @@ fun HomeScreen(
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         Text(
-                            text = "Sessions trend",
+                            text = "Sessions trend (last 8 Days)",
                             style = MaterialTheme.typography.titleMedium
                         )
                         Spacer(modifier = Modifier.height(8.dp))
